@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
+  <title id="title">git-ship workflow</title>
+  <desc id="desc">Seven stages move a change from inspection through synchronization, branching, committing, verification, pull request, and squash merge, with explicit stop conditions.</desc>
+
+  <rect width="1200" height="340" rx="28" fill="#F4F1E8"/>
+  <text x="56" y="54" fill="#202522" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="30" font-weight="750">A release lane with brakes</text>
+  <text x="1144" y="51" fill="#66706C" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" text-anchor="end">7 STAGES · 4 STOP GATES</text>
+
+  <path d="M94 158H1104" fill="none" stroke="#CCD2CE" stroke-width="6" stroke-linecap="round"/>
+  <path d="M94 158H1080" fill="none" stroke="#26302C" stroke-width="2" stroke-linecap="round"/>
+  <path d="M1092 150l16 8-16 8" fill="none" stroke="#26302C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" text-anchor="middle">
+    <g transform="translate(104 158)">
+      <circle r="26" fill="#202522"/>
+      <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">1</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Inspect</text>
+      <text y="86" fill="#66706C" font-size="14">status + diff</text>
+    </g>
+    <g transform="translate(268 158)">
+      <circle r="26" fill="#202522"/>
+      <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">2</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Sync</text>
+      <text y="86" fill="#66706C" font-size="14">stash + pull</text>
+    </g>
+    <g transform="translate(432 158)">
+      <circle r="26" fill="#202522"/>
+      <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">3</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Branch</text>
+      <text y="86" fill="#66706C" font-size="14">fresh name</text>
+    </g>
+    <g transform="translate(596 158)">
+      <circle r="26" fill="#202522"/>
+      <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">4</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Commit</text>
+      <text y="86" fill="#66706C" font-size="14">conventional</text>
+    </g>
+    <g transform="translate(760 158)">
+      <circle r="26" fill="#202522"/>
+      <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">5</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Verify</text>
+      <text y="86" fill="#66706C" font-size="14">repo checks</text>
+    </g>
+    <g transform="translate(924 158)">
+      <circle r="26" fill="#F2B84B"/>
+      <text y="7" fill="#202522" font-size="20" font-weight="800">6</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Pull request</text>
+      <text y="86" fill="#66706C" font-size="14">reviewable proof</text>
+    </g>
+    <g transform="translate(1088 158)">
+      <circle r="26" fill="#59D185"/>
+      <path d="M-9 0l6 6 13-15" fill="none" stroke="#15301F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Squash</text>
+      <text y="86" fill="#66706C" font-size="14">back on main</text>
+    </g>
+  </g>
+
+  <g transform="translate(56 278)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
+    <rect width="1088" height="38" rx="19" fill="#E5E2D9"/>
+    <circle cx="22" cy="19" r="6" fill="#E95F5F"/>
+    <text x="38" y="24" fill="#4C5551">STOP ON</text>
+    <text x="122" y="24" fill="#202522" font-weight="700">pull failure</text>
+    <circle cx="275" cy="19" r="3" fill="#9CA5A1"/>
+    <text x="296" y="24" fill="#202522" font-weight="700">stash conflict</text>
+    <circle cx="458" cy="19" r="3" fill="#9CA5A1"/>
+    <text x="479" y="24" fill="#202522" font-weight="700">failed checks</text>
+    <circle cx="632" cy="19" r="3" fill="#9CA5A1"/>
+    <text x="653" y="24" fill="#202522" font-weight="700">protected merge</text>
+    <text x="1064" y="24" fill="#4C5551" text-anchor="end">NO FORCE · NO HARD RESET</text>
+  </g>
+</svg>
