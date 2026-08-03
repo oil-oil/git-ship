@@ -3,6 +3,8 @@ name: git-ship
 description: |
   自动化 Git 工作流一键发布助手，执行完整的「ship」流程：
   基于最新 main 切新分支 → commit → 推送 → 创建 PR → squash merge → 回 main。
+  调用 ship 本身就是对完整流程的授权；自动推断分支名、commit message 和 PR 内容，
+  不为这些常规信息请求确认，只在冲突、验证失败或命令阻塞时暂停。
 
   仅在用户明确表达「ship」意图时触发，例如：
   - 直接说「ship」「/ship」「git ship」
@@ -26,6 +28,9 @@ description: |
 当前改动 → 基于最新 main 切新分支 → commit → PR → squash merge → 回 main
 ```
 
+用户调用 `ship` 就表示已经授权执行整条工作流。流程应连续完成，不要为分支名、
+commit message、PR 标题、PR 正文或是否继续等常规信息请求确认。
+
 ## 第 0 步：信息收集
 
 开始前先检查现状：
@@ -39,32 +44,26 @@ gh auth status
 
 如果没有未提交改动，提示用户检查现状并停止。
 
-需要确认两件事：
+自动确定以下信息：
 
 **1. 分支名**
 
 - 用户已经提供时直接使用。
 - 否则根据 `git diff --stat` 推断，格式为 `<type>/<short-desc>`。
-- 向用户展示推断结果，允许确认或修改。
+- 遵循目标仓库已有分支前缀或命名规则；没有规则时使用语义化名称。
 
 **2. Commit message**
 
 - 用户已经提供时直接使用。
 - 否则根据 `git diff` 生成 Conventional Commits 格式：`<type>(<scope>): <description>`。
-- 向用户展示推断结果，允许确认或修改。
 
-收集完毕后打印：
+**3. PR 标题和正文**
 
-```text
-📦 准备 ship：
-  分支名：feat/xxx
-  Commit：feat(xxx): add xxx
-  目标：main ← feat/xxx（squash merge）
+- PR 标题默认使用 commit message。
+- PR 正文根据 diff 自动生成 2–3 条 Summary 和改动文件概览。
+- 不单独询问 PR 名称或正文。
 
-继续？(y/n)
-```
-
-得到明确确认后再继续。
+确定后简短告知用户即将使用的分支和 commit，然后立即继续，不等待回复。
 
 ## 第 1 步：同步主分支
 
@@ -151,6 +150,8 @@ git pull origin main
 - 任何命令失败后立即停止。
 - 不使用 force push、`reset --hard` 或其他破坏性恢复方式。
 - 不自动解决冲突。
+- 不为自动推断的分支名、commit message、PR 标题、PR 正文或继续执行请求确认。
+- 只有发生冲突、验证失败、认证缺失、仓库保护阻止合并或需要用户选择时才暂停。
 - 给出明确、可执行的下一步。
 
 ## 常见边界情况

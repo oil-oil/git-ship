@@ -12,7 +12,7 @@
 working tree → latest main → new branch → commit → local checks → PR → squash merge
 ```
 
-It pauses before publishing, proposes a branch name and Conventional Commit message, and stops on conflicts or failed validation.
+Invoking `ship` authorizes the full workflow. It automatically generates the branch name, Conventional Commit, and PR content, then runs without routine confirmation. It stops only on conflicts, failed validation, or another blocking command.
 
 <p align="center">
   <img src="./assets/readme/workflow.svg" width="100%" alt="The seven guarded stages of the git-ship workflow">
@@ -51,7 +51,7 @@ You can also provide the branch and commit up front:
 Ship this as feat/add-export with commit "feat(export): add markdown export"
 ```
 
-Before changing branches or publishing anything, `git-ship` shows the resolved plan:
+`git-ship` shows the resolved plan and then continues immediately:
 
 ```text
 📦 Ready to ship:
@@ -60,7 +60,7 @@ Before changing branches or publishing anything, `git-ship` shows the resolved p
   Target: main ← feat/add-export (squash merge)
 ```
 
-The workflow continues only after confirmation.
+It does not ask for confirmation of the branch name, commit message, PR title, or PR body. Provide explicit names in the initial request when needed.
 
 ## How it works
 
@@ -85,11 +85,11 @@ When no trustworthy validation command exists, the Skill reports that clearly in
 
 ## Safety model
 
-`git-ship` treats publishing as a gated operation. It asks for confirmation before the workflow, keeps the current working tree in a temporary stash during synchronization, and stops immediately when a command fails. It does not use force push, `reset --hard`, or automatic conflict resolution.
+Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It keeps the current working tree in a temporary stash during synchronization and stops immediately on conflicts, failed validation, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
 
 ## Customize
 
-Fork the repository and edit `SKILL.md` to match your team's branch naming, merge strategy, PR template, or required checks. Keep the confirmation and failure gates intact when adding automation.
+Fork the repository and edit `SKILL.md` to match your team's branch naming, merge strategy, PR template, or required checks. Keep the conflict and failure gates intact when adding automation.
 
 ## Contributing
 
