@@ -12,7 +12,7 @@
 工作区改动 → 最新 main → 新分支 → commit → 本地验证 → PR → squash merge
 ```
 
-它会先给出分支名和 Conventional Commit 建议，得到确认后才发布；遇到冲突或验证失败会立即停止。
+调用 `ship` 就表示授权完整发布流程。它会自动生成分支名、Conventional Commit 和 PR 内容并直接执行；遇到冲突、验证失败或命令阻塞才会停止。
 
 <p align="center">
   <img src="./assets/readme/workflow.svg" width="100%" alt="git-ship 七个带安全检查的工作阶段">
@@ -51,7 +51,7 @@ ship
 把这次改动 ship 为 feat/add-export，commit 用 "feat(export): add markdown export"
 ```
 
-切换分支和发布之前，`git-ship` 会先展示最终方案：
+`git-ship` 会展示自动确定的方案，然后立即继续：
 
 ```text
 📦 准备 ship：
@@ -60,7 +60,7 @@ ship
   目标：main ← feat/add-export（squash merge）
 ```
 
-只有得到确认后，流程才会继续。
+不需要确认分支名、commit message、PR 标题或 PR 正文。需要特定名称时，在调用 `ship` 时直接提供即可。
 
 ## 工作流程
 
@@ -85,11 +85,11 @@ ship
 
 ## 安全边界
 
-`git-ship` 把发布视为需要确认的操作。它会在流程开始前等待确认，同步主分支时用临时 stash 保护工作区，并在任何命令失败时立刻停止。它不会使用 force push、`reset --hard` 或自动解决冲突。
+调用 `ship` 本身就是对完整发布流程的授权。Skill 不会为常规命名再次确认；同步主分支时仍会用临时 stash 保护工作区，并在冲突、验证失败、认证缺失或命令失败时立刻停止。它不会使用 force push、`reset --hard` 或自动解决冲突。
 
 ## 自定义
 
-你可以 fork 仓库并修改 `SKILL.md`，接入团队自己的分支命名、合并策略、PR 模板或必跑检查。增加自动化时，建议保留确认和失败停止机制。
+你可以 fork 仓库并修改 `SKILL.md`，接入团队自己的分支命名、合并策略、PR 模板或必跑检查。增加自动化时，建议保留冲突和失败停止机制。
 
 ## 参与贡献
 
