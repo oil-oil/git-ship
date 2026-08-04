@@ -20,14 +20,14 @@
     <g transform="translate(268 158)">
       <circle r="26" fill="#202522"/>
       <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">2</text>
-      <text y="62" fill="#202522" font-size="18" font-weight="750">Sync</text>
-      <text y="86" fill="#66706C" font-size="14">stash + pull</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Fetch</text>
+      <text y="86" fill="#66706C" font-size="14">origin/main</text>
     </g>
     <g transform="translate(432 158)">
       <circle r="26" fill="#202522"/>
       <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">3</text>
-      <text y="62" fill="#202522" font-size="18" font-weight="750">Branch</text>
-      <text y="86" fill="#66706C" font-size="14">fresh name</text>
+      <text y="62" fill="#202522" font-size="18" font-weight="750">Isolate</text>
+      <text y="86" fill="#66706C" font-size="14">worktree</text>
     </g>
     <g transform="translate(596 158)">
       <circle r="26" fill="#202522"/>
@@ -51,7 +51,7 @@
       <circle r="26" fill="#59D185"/>
       <path d="M-9 0l6 6 13-15" fill="none" stroke="#15301F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       <text y="62" fill="#202522" font-size="18" font-weight="750">Squash</text>
-      <text y="86" fill="#66706C" font-size="14">back on main</text>
+      <text y="86" fill="#66706C" font-size="14">clean up</text>
     </g>
   </g>
 
@@ -59,9 +59,9 @@
     <rect width="1088" height="38" rx="19" fill="#E5E2D9"/>
     <circle cx="22" cy="19" r="6" fill="#E95F5F"/>
     <text x="38" y="24" fill="#4C5551">STOP ON</text>
-    <text x="122" y="24" fill="#202522" font-weight="700">pull failure</text>
+    <text x="122" y="24" fill="#202522" font-weight="700">fetch failure</text>
     <circle cx="275" cy="19" r="3" fill="#9CA5A1"/>
-    <text x="296" y="24" fill="#202522" font-weight="700">stash conflict</text>
+    <text x="296" y="24" fill="#202522" font-weight="700">snapshot conflict</text>
     <circle cx="458" cy="19" r="3" fill="#9CA5A1"/>
     <text x="479" y="24" fill="#202522" font-weight="700">failed checks</text>
     <circle cx="632" cy="19" r="3" fill="#9CA5A1"/>

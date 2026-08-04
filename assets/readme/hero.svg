@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" role="img" aria-labelledby="title desc">
   <title id="title">git-ship</title>
-  <desc id="desc">A guarded release lane that moves working-tree changes through main sync, branch, pull request, and squash merge.</desc>
+  <desc id="desc">A guarded release lane that ships a working-tree snapshot through an isolated worktree, pull request, and squash merge.</desc>
 
   <rect width="1200" height="400" rx="28" fill="#0C0F0E"/>
 
@@ -39,17 +39,17 @@
       <g transform="translate(54 91)">
         <circle r="13" fill="#59D185"/>
         <path d="M-5 0l3 3 7-8" fill="none" stroke="#0C0F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text y="34" fill="#B7C2BE">stash</text>
+        <text y="34" fill="#B7C2BE">snapshot</text>
       </g>
       <g transform="translate(108 91)">
         <circle r="13" fill="#59D185"/>
         <path d="M-5 0l3 3 7-8" fill="none" stroke="#0C0F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text y="34" fill="#B7C2BE">sync</text>
+        <text y="34" fill="#B7C2BE">fetch</text>
       </g>
       <g transform="translate(162 91)">
         <circle r="13" fill="#59D185"/>
         <path d="M-5 0l3 3 7-8" fill="none" stroke="#0C0F0E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text y="34" fill="#B7C2BE">branch</text>
+        <text y="34" fill="#B7C2BE">worktree</text>
       </g>
       <g transform="translate(216 91)">
         <circle r="13" fill="#59D185"/>

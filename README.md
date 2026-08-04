@@ -9,7 +9,7 @@
 `git-ship` is an Agent Skill for completing the repetitive Git handoff around a finished change:
 
 ```text
-working tree → latest main → new branch → commit → local checks → PR → squash merge
+working-tree snapshot → isolated worktree → commit → local checks → PR → squash merge
 ```
 
 Invoking `ship` authorizes the full workflow. It automatically generates the branch name, Conventional Commit, and PR content, then runs without routine confirmation. It stops only on conflicts, failed validation, or another blocking command.
@@ -20,11 +20,12 @@ Invoking `ship` authorizes the full workflow. It automatically generates the bra
 
 ## Why use it
 
-- Keeps local changes safe while synchronizing with the latest `main`.
+- Leaves the original working tree, branch, and index untouched.
+- Ships an isolated snapshot from a temporary worktree based on the latest `origin/main`.
 - Uses a fresh, descriptive branch for every shipment.
 - Creates a Conventional Commit and a readable pull request summary.
 - Runs the repository's existing checks before anything is pushed.
-- Squash-merges the PR, deletes the remote branch, and returns to an up-to-date `main`.
+- Squash-merges the PR, deletes the remote branch, and cleans up the temporary worktree.
 - Stops on conflicts, missing authentication, failed checks, or ambiguous destructive actions.
 
 ## Install
@@ -67,12 +68,12 @@ It does not ask for confirmation of the branch name, commit message, PR title, o
 | Stage | Action | Guard |
 | --- | --- | --- |
 | Inspect | Read status and diff | Stops when there is nothing to ship |
-| Sync | Stash tracked and untracked changes, then pull `main` | Stops when pull fails |
-| Branch | Create a new branch | Stops when the name already exists |
-| Commit | Restore changes and commit all files | Stops on stash conflicts |
+| Sync | Fetch the latest `origin/main` without switching branches | Stops when fetch fails |
+| Isolate | Create a temporary worktree and apply the change snapshot | Keeps the original workspace untouched |
+| Commit | Review and commit the snapshot in the temporary worktree | Stops on snapshot conflicts |
 | Verify | Run documented repository checks | Never pushes failed validation |
 | Publish | Push and create a PR with `gh` | Requires GitHub authentication |
-| Merge | Squash, delete branch, return to `main` | Never force-pushes or hard-resets |
+| Merge | Squash, delete branch, and clean up the worktree | Never force-pushes or hard-resets |
 
 ## Requirements
 
@@ -85,7 +86,7 @@ When no trustworthy validation command exists, the Skill reports that clearly in
 
 ## Safety model
 
-Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It keeps the current working tree in a temporary stash during synchronization and stops immediately on conflicts, failed validation, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
+Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It snapshots the current changes into a temporary worktree without switching branches, stashing files, or changing the original index. It stops immediately on conflicts, failed validation, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
 
 ## Customize
 
