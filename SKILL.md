@@ -2,9 +2,7 @@
 name: git-ship
 description: |
   自动化 Git 工作流一键发布助手，执行完整的「ship」流程：
-  隔离快照当前改动 → 基于最新 origin/main 创建临时 worktree 和新分支
-  → commit → 推送 → 创建 PR → squash merge → 清理临时 worktree。
-  原工作区全程不 stash、不切分支、不改索引，适合多个 Agent 或任务并行工作。
+  基于最新 main 切新分支 → commit → 推送 → 创建 PR → squash merge → 回 main。
   调用 ship 本身就是对完整流程的授权；自动推断分支名、commit message 和 PR 内容，
   不为这些常规信息请求确认，只在冲突、验证失败或命令阻塞时暂停。
 
@@ -14,236 +12,154 @@ description: |
   - 使用类似「发布这次改动」「把这些改动提成 PR 并合并」的表达
 
   不应触发的情况：
-  - 只是想 commit（用 /commit skill）
-  - 只是想创建 PR（不需要完整 ship 流程）
+  - 只是想 commit
+  - 只是想创建 PR
   - 只是想 push 代码
   - 讨论 git 相关问题或解释 git 概念
 ---
 
-# git-ship — 隔离式一键 Git 工作流
+# git-ship — 一键 Git 工作流
 
 ## 目标
 
-把调用 `ship` 时捕获到的当前工作区改动，完整走完这条路径：
+把当前工作区的改动，完整走完这条路径：
 
 ```text
-当前改动快照
-  → 基于最新 origin/main 创建临时 worktree 和新分支
-  → commit → PR → squash merge
-  → 清理临时 worktree
+当前改动 → 基于最新 main 切新分支 → commit → PR → squash merge → 回 main
 ```
 
-核心原则：原工作区可能正被其他 Agent 或任务使用。全程不要在原工作区执行
-`stash`、`checkout`、`switch`、`reset`、`clean`、`add` 或 `commit`，也不要改动它的索引。
+用户调用 `ship` 就表示已经授权执行整条工作流。流程应连续完成，不要为分支名、
+commit message、PR 标题、PR 正文或是否继续等常规信息请求确认。
 
 ## 第 0 步：信息收集
 
-先在原工作区只读检查现状：
+开始前先检查现状：
 
 ```bash
-git status --short
-git diff --stat HEAD
-git diff HEAD
-git ls-files --others --exclude-standard
+git status
+git diff --stat
+git remote -v
+gh auth status
 ```
 
-待发布内容以这些命令执行时的快照为准。后续并行产生的新改动不自动纳入本次发布。
+如果没有未提交改动，提示用户检查现状并停止。
 
-如果没有已跟踪改动，也没有未跟踪文件，提示「没有检测到未提交改动」并停止。
+自动确定以下信息：
 
-用户调用 `ship` 就表示已经授权执行整条工作流。不要为分支名、commit message、
-PR 标题、PR 正文或是否继续等常规信息请求确认。
+**1. 分支名**
 
-### 自动确定发布信息
+- 用户已经提供时直接使用。
+- 否则根据 `git diff --stat` 推断，格式为 `<type>/<short-desc>`。
+- 遵循目标仓库已有分支前缀或命名规则；没有规则时使用语义化名称。
 
-1. **分支名**
-   - 用户提供时直接使用。
-   - 否则根据改动推断，格式为 `<type>/<short-desc>`，例如
-     `feat/add-login-page`、`fix/null-pointer-crash`。
-   - 自动推断的名称已存在时，追加简短时间戳或随机后缀并继续，避免并行 ship 撞名。
-     用户明确指定的名称已存在时停止，不覆盖。
+**2. Commit message**
 
-2. **Commit message**
-   - 用户提供时直接使用。
-   - 否则根据 diff 生成 Conventional Commits 格式：
-     `<type>(<scope>): <description>`。
+- 用户已经提供时直接使用。
+- 否则根据 `git diff` 生成 Conventional Commits 格式：`<type>(<scope>): <description>`。
 
-3. **PR 标题和正文**
-   - PR 标题默认使用 commit message。
-   - PR 正文根据快照生成 Summary 和改动文件概览。
+**3. PR 标题和正文**
 
-简短告知用户即将使用的分支和 commit，然后立即继续，不等待回复。
+- PR 标题默认使用 commit message。
+- PR 正文根据 diff 自动生成 2–3 条 Summary 和改动文件概览。
+- 不单独询问 PR 名称或正文。
 
-## 第 1 步：同步远端主分支
+确定后简短告知用户即将使用的分支和 commit，然后立即继续，不等待回复。
 
-只更新远端引用，不 checkout 或 pull 原工作区：
+## 第 1 步：同步主分支
 
 ```bash
-git fetch origin main --prune
+git stash push --include-untracked -m "git-ship: temp stash"
+git checkout main
+git pull origin main
 ```
 
-记录：
+告知用户最新 `main` 的 commit hash。`git pull` 失败时立即停止，不要自动处理冲突。
+
+## 第 2 步：创建分支
 
 ```bash
-git rev-parse --short origin/main
+git checkout -b <branch-name>
 ```
 
-告知用户：`已获取最新 origin/main（commit: <hash>）`。
+分支名已存在时停止，请用户提供新名称。
 
-如果 fetch 失败，停止并报告认证或网络问题。
-
-## 第 2 步：创建隔离 worktree 并复制改动快照
-
-从 skill 目录调用快照脚本：
+## 第 3 步：恢复改动并提交
 
 ```bash
-SHIP_WORKTREE="$(
-  bash "<skill-directory>/scripts/create_ship_worktree.sh" "<branch-name>"
-)"
+git stash pop
+git add -A
+git commit -m "<commit-message>"
 ```
 
-脚本会：
+如果 `stash pop` 发生冲突，立即停止，列出冲突文件并给出人工处理步骤。不要自动解决冲突。
 
-- 从最新 `origin/main` 创建临时 worktree 和 `<branch-name>`；
-- 把原工作区相对 `HEAD` 的已跟踪改动以三方合并方式应用进去；
-- 复制未跟踪且未被 ignore 的文件；
-- 暂存快照；
-- 输出临时 worktree 的绝对路径。
+## 第 3.5 步：本地验证
 
-后续所有 Git 命令都必须在 `$SHIP_WORKTREE` 中执行。验证只在无需安装依赖时执行。
+根据当前改动和仓库说明，寻找已有验证命令：
 
-如果脚本报告冲突，停止。原工作区不受影响；保留临时 worktree，明确告诉用户其路径，
-让用户在隔离目录中解决冲突。不要回到原工作区修冲突。
+1. 优先读取 `AGENTS.md`、`CONTRIBUTING.md` 和 `README.md`。
+2. 再检查 `package.json`、`pyproject.toml`、`Makefile`、CI 配置等项目文件。
+3. 运行与改动范围直接相关的最小检查，例如 lint、typecheck、test 或 build。
+4. 找不到可信命令时，明确告知用户跳过了哪些验证以及原因，不要自行编造命令。
 
-告知用户：`已创建隔离分支 <branch-name>（worktree: <path>）`。
-
-## 第 3 步：检查快照并 commit
-
-在临时 worktree 中确认内容：
-
-```bash
-git -C "$SHIP_WORKTREE" status --short
-git -C "$SHIP_WORKTREE" diff --cached --stat
-git -C "$SHIP_WORKTREE" diff --cached
-```
-
-确认快照没有意外文件后提交：
-
-```bash
-git -C "$SHIP_WORKTREE" commit -m "<commit-message>"
-```
-
-commit 成功后告知用户 commit hash。
-
-## 第 3.5 步：可选本地验证（禁止安装依赖）
-
-临时 worktree 不会复制被 Git ignore 的 `node_modules`、虚拟环境等依赖目录。
-ship 流程不负责安装、同步或下载依赖，也不要要求用户为临时 worktree 安装依赖。
-
-- 仅当仓库已有验证命令可以直接运行且明确不会安装、同步或下载依赖时，才执行验证。
-- 不要执行 `npm install`、`pnpm install`、`yarn install`、`bun install`、`uv sync`、
-  `pip install` 等依赖安装命令。
-- 不要执行可能自动下载缺失包的命令，例如不带禁止安装参数的 `npx`。
-- 依赖或工具在临时 worktree 中不可用时，直接跳过验证并继续发布，简短说明：
-  `隔离 worktree 未包含依赖，已按约定跳过本地验证。`
-- 只有在验证命令已成功启动、且明确因代码检查失败时才停止发布。
-
-跳过验证不是错误，不要因此暂停，也不要询问用户是否安装依赖。
+验证失败时立即停止，不要 push 未通过验证的提交。
 
 ## 第 4 步：推送并创建 PR
 
 ```bash
-git -C "$SHIP_WORKTREE" push -u origin "<branch-name>"
+git push -u origin <branch-name>
 ```
 
-然后创建 PR：
+使用 `gh pr create` 创建 PR：
 
-```bash
-cd "$SHIP_WORKTREE"
-gh pr create \
-  --title "<PR title>" \
-  --body "$(cat <<'EOF'
-## Summary
-<根据 diff 内容自动生成 2-3 条 bullet points>
+- base 为 `main`
+- head 为新分支
+- 标题使用 commit message
+- 正文包含 2–3 条 Summary、改动文件概览和 `🤖 Shipped via git-ship`
 
-## Changes
-<文件改动列表>
+创建成功后向用户展示 PR URL。
 
-🤖 Shipped via git-ship
-EOF
-)" \
-  --base main \
-  --head "<branch-name>"
-```
+## 第 5 步：Squash 合并
 
-打印 PR URL：`PR 已创建：<url>`。
-
-## 第 5 步：直接合并
-
-不等待 CI，创建 PR 后立即合并：
+本地验证通过后直接合并：
 
 ```bash
 gh pr merge <pr-number> --squash --delete-branch
 ```
 
-如果用户传入 `--no-squash`，改用 `--merge`。
+如果仓库规则阻止合并，停止并展示 GitHub 返回的信息，不要绕过保护规则。
 
-合并命令成功后，再确认 PR 状态确实为 `MERGED`：
-
-```bash
-gh pr view <pr-number> --json state --jq '.state'
-```
-
-只有确认已合并，才进入清理步骤。
-
-## 第 6 步：清理隔离 worktree
-
-PR 合并成功后：
+## 第 6 步：回到 main
 
 ```bash
-git worktree remove "$SHIP_WORKTREE"
-git branch -D "<branch-name>"
-git fetch origin main --prune
+git checkout main
+git pull origin main
 ```
 
-这里允许删除本次新建的本地分支，因为它已确认合并且远端分支已删除。不要删除其他分支。
-
-不要在原工作区执行 `checkout main` 或 `pull`。原工作区保持调用前的分支、文件和索引状态；
-它可能仍显示本次已发布的改动，这是隔离并行工作的预期结果。
-
-最终输出：
+打印最终状态：
 
 ```text
 🚀 Ship 完成！
   ✓ 分支 <branch-name> 已合并到 main
-  ✓ 临时 worktree 已清理
-  ✓ 原工作区未切分支、未 stash、未改索引
-  ✓ origin/main 已更新到 <commit-hash>
+  ✓ 当前在 main，已同步最新代码（<commit-hash>）
 ```
 
 ## 错误处理原则
 
 - 每步操作前简短说明正在做什么。
-- 出错立即停止，不执行 force push、reset --hard 或 clean。
-- 合并前发生错误时，保留临时 worktree 和分支，报告其绝对路径和明确的下一步。
-- 只有确认 PR 已合并，才删除临时 worktree 和本次创建的本地分支。
+- 任何命令失败后立即停止。
+- 不使用 force push、`reset --hard` 或其他破坏性恢复方式。
+- 不自动解决冲突。
 - 不为自动推断的分支名、commit message、PR 标题、PR 正文或继续执行请求确认。
-- 只有发生冲突、验证失败、认证缺失、仓库保护阻止合并或确实需要用户选择时才暂停。
+- 只有发生冲突、验证失败、认证缺失、仓库保护阻止合并或需要用户选择时才暂停。
+- 给出明确、可执行的下一步。
 
 ## 常见边界情况
 
 | 情况 | 处理方式 |
-|---|---|
-| 原工作区位于非 main 分支 | 不切换；仍把相对当前 `HEAD` 的未提交改动应用到最新 `origin/main` |
-| 原工作区已有 staged 内容 | 按 `HEAD` 总快照发布；不保留 staged/unstaged 边界，原索引不变 |
-| 并行任务继续修改原工作区 | 本次只发布创建 worktree 时捕获的快照，后续改动留给下一次 ship |
-| 没有未提交改动 | 提示没有检测到改动并停止 |
-| 自动推断的分支名已存在 | 自动追加简短时间戳或随机后缀，不复用、不覆盖 |
-| 用户指定的分支名已存在 | 停止并提示冲突 |
-| 应用快照发生冲突 | 保留隔离 worktree，在其中解决；原工作区不受影响 |
-| 验证失败 | 不 push，保留隔离 worktree并报告路径 |
-| 临时 worktree 没有依赖 | 不安装、不询问，跳过本地验证并继续 |
-| gh 未登录 | 提示执行 `gh auth login` |
-| PR 合并失败或受保护规则阻止 | 保留 worktree 和分支，不清理 |
-| `--no-squash` 参数 | 使用 `--merge` 而不是 `--squash` |
-| 子模块内有未提交改动 | 不会被普通 Git diff 完整捕获；停止并提示用户单独处理 |
+| --- | --- |
+| 当前在非 main 分支 | stash → 切 main → pull → 新分支 → pop |
+| 没有未提交改动 | 提示用户检查是否已 commit，然后停止 |
+| 分支名已存在 | 停止并请用户提供新名称 |
+| `gh` 未登录 | 提示运行 `gh auth login` |
+| 用户指定 `--no-squash` | 使用 `--merge` |
