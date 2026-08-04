@@ -39,7 +39,7 @@
       <circle r="26" fill="#202522"/>
       <text y="7" fill="#F4F1E8" font-size="20" font-weight="800">5</text>
       <text y="62" fill="#202522" font-size="18" font-weight="750">Verify</text>
-      <text y="86" fill="#66706C" font-size="14">repo checks</text>
+      <text y="86" fill="#66706C" font-size="14">if available</text>
     </g>
     <g transform="translate(924 158)">
       <circle r="26" fill="#F2B84B"/>

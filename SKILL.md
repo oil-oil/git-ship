@@ -110,7 +110,7 @@ SHIP_WORKTREE="$(
 - 暂存快照；
 - 输出临时 worktree 的绝对路径。
 
-后续所有 Git、验证和构建命令都必须在 `$SHIP_WORKTREE` 中执行。
+后续所有 Git 命令都必须在 `$SHIP_WORKTREE` 中执行。验证只在无需安装依赖时执行。
 
 如果脚本报告冲突，停止。原工作区不受影响；保留临时 worktree，明确告诉用户其路径，
 让用户在隔离目录中解决冲突。不要回到原工作区修冲突。
@@ -135,19 +135,20 @@ git -C "$SHIP_WORKTREE" commit -m "<commit-message>"
 
 commit 成功后告知用户 commit hash。
 
-## 第 3.5 步：本地验证
+## 第 3.5 步：可选本地验证（禁止安装依赖）
 
-根据本次提交涉及的项目，在临时 worktree 中运行对应检查：
+临时 worktree 不会复制被 Git ignore 的 `node_modules`、虚拟环境等依赖目录。
+ship 流程不负责安装、同步或下载依赖，也不要要求用户为临时 worktree 安装依赖。
 
-- **apps/client 有改动**：
-  `cd "$SHIP_WORKTREE/apps/client" && npx tsc --noEmit`
-- **apps/api 有改动**：
-  `cd "$SHIP_WORKTREE/apps/api" && uv run ruff check && uv run ruff format --check`
+- 仅当仓库已有验证命令可以直接运行且明确不会安装、同步或下载依赖时，才执行验证。
+- 不要执行 `npm install`、`pnpm install`、`yarn install`、`bun install`、`uv sync`、
+  `pip install` 等依赖安装命令。
+- 不要执行可能自动下载缺失包的命令，例如不带禁止安装参数的 `npx`。
+- 依赖或工具在临时 worktree 中不可用时，直接跳过验证并继续发布，简短说明：
+  `隔离 worktree 未包含依赖，已按约定跳过本地验证。`
+- 只有在验证命令已成功启动、且明确因代码检查失败时才停止发布。
 
-如果仓库提供更准确的 `AGENTS.md`、测试或构建命令，以仓库说明为准。
-
-验证失败时停止，不 push。保留临时 worktree 和分支，报告路径及失败命令，方便继续修复；
-不要改动原工作区。
+跳过验证不是错误，不要因此暂停，也不要询问用户是否安装依赖。
 
 ## 第 4 步：推送并创建 PR
 
@@ -241,6 +242,7 @@ git fetch origin main --prune
 | 用户指定的分支名已存在 | 停止并提示冲突 |
 | 应用快照发生冲突 | 保留隔离 worktree，在其中解决；原工作区不受影响 |
 | 验证失败 | 不 push，保留隔离 worktree并报告路径 |
+| 临时 worktree 没有依赖 | 不安装、不询问，跳过本地验证并继续 |
 | gh 未登录 | 提示执行 `gh auth login` |
 | PR 合并失败或受保护规则阻止 | 保留 worktree 和分支，不清理 |
 | `--no-squash` 参数 | 使用 `--merge` 而不是 `--squash` |

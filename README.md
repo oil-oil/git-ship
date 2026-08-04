@@ -24,7 +24,7 @@ Invoking `ship` authorizes the full workflow. It automatically generates the bra
 - Ships an isolated snapshot from a temporary worktree based on the latest `origin/main`.
 - Uses a fresh, descriptive branch for every shipment.
 - Creates a Conventional Commit and a readable pull request summary.
-- Runs the repository's existing checks before anything is pushed.
+- Runs existing checks only when they need no dependency installation; otherwise skips them.
 - Squash-merges the PR, deletes the remote branch, and cleans up the temporary worktree.
 - Stops on conflicts, missing authentication, failed checks, or ambiguous destructive actions.
 
@@ -71,7 +71,7 @@ It does not ask for confirmation of the branch name, commit message, PR title, o
 | Sync | Fetch the latest `origin/main` without switching branches | Stops when fetch fails |
 | Isolate | Create a temporary worktree and apply the change snapshot | Keeps the original workspace untouched |
 | Commit | Review and commit the snapshot in the temporary worktree | Stops on snapshot conflicts |
-| Verify | Run documented repository checks | Never pushes failed validation |
+| Verify | Run checks only when dependencies are already available | Never installs dependencies; skips unavailable checks |
 | Publish | Push and create a PR with `gh` | Requires GitHub authentication |
 | Merge | Squash, delete branch, and clean up the worktree | Never force-pushes or hard-resets |
 
@@ -80,13 +80,13 @@ It does not ask for confirmation of the branch name, commit message, PR title, o
 - Git
 - [GitHub CLI](https://cli.github.com/) authenticated with `gh auth login`
 - A repository whose primary branch is `main`
-- Repository validation commands documented in files such as `AGENTS.md`, `README.md`, `package.json`, `pyproject.toml`, or `Makefile`
+- Optional repository validation commands that can run without installing or synchronizing dependencies
 
-When no trustworthy validation command exists, the Skill reports that clearly instead of inventing one.
+When a temporary worktree does not contain the required dependencies, the Skill skips local validation and continues. It never asks the user to install dependencies just for shipping.
 
 ## Safety model
 
-Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It snapshots the current changes into a temporary worktree without switching branches, stashing files, or changing the original index. It stops immediately on conflicts, failed validation, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
+Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It snapshots the current changes into a temporary worktree without switching branches, stashing files, or changing the original index. It never installs or synchronizes dependencies in that worktree; unavailable checks are skipped. It stops immediately on conflicts, actual code-check failures, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
 
 ## Customize
 
