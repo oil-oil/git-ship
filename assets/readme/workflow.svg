@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="title desc">
   <title id="title">git-ship workflow</title>
-  <desc id="desc">Seven stages move a change from inspection through synchronization, branching, committing, verification, pull request, and squash merge, with explicit stop conditions.</desc>
+  <desc id="desc">Seven stages move a change from inspection through synchronization, branching, committing, verification, pull request, and squash merge, with automatic recovery loops.</desc>
 
   <rect width="1200" height="340" rx="28" fill="#F4F1E8"/>
-  <text x="56" y="54" fill="#202522" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="30" font-weight="750">A release lane with brakes</text>
-  <text x="1144" y="51" fill="#66706C" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" text-anchor="end">7 STAGES · 4 STOP GATES</text>
+  <text x="56" y="54" fill="#202522" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="30" font-weight="750">A release lane that recovers</text>
+  <text x="1144" y="51" fill="#66706C" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" text-anchor="end">7 STAGES · RECOVERY LOOPS</text>
 
   <path d="M94 158H1104" fill="none" stroke="#CCD2CE" stroke-width="6" stroke-linecap="round"/>
   <path d="M94 158H1080" fill="none" stroke="#26302C" stroke-width="2" stroke-linecap="round"/>
@@ -57,15 +57,15 @@
 
   <g transform="translate(56 278)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13">
     <rect width="1088" height="38" rx="19" fill="#E5E2D9"/>
-    <circle cx="22" cy="19" r="6" fill="#E95F5F"/>
-    <text x="38" y="24" fill="#4C5551">STOP ON</text>
-    <text x="122" y="24" fill="#202522" font-weight="700">pull failure</text>
+    <circle cx="22" cy="19" r="6" fill="#59D185"/>
+    <text x="38" y="24" fill="#4C5551">RECOVER</text>
+    <text x="122" y="24" fill="#202522" font-weight="700">sync conflicts</text>
     <circle cx="275" cy="19" r="3" fill="#9CA5A1"/>
-    <text x="296" y="24" fill="#202522" font-weight="700">stash conflict</text>
+    <text x="296" y="24" fill="#202522" font-weight="700">stash conflicts</text>
     <circle cx="458" cy="19" r="3" fill="#9CA5A1"/>
     <text x="479" y="24" fill="#202522" font-weight="700">failed checks</text>
     <circle cx="632" cy="19" r="3" fill="#9CA5A1"/>
-    <text x="653" y="24" fill="#202522" font-weight="700">protected merge</text>
-    <text x="1064" y="24" fill="#4C5551" text-anchor="end">NO FORCE · NO HARD RESET</text>
+    <text x="653" y="24" fill="#202522" font-weight="700">main updates</text>
+    <text x="1064" y="24" fill="#4C5551" text-anchor="end">STOP ONLY ON EXTERNAL BLOCKERS</text>
   </g>
 </svg>

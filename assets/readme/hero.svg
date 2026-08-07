@@ -19,7 +19,7 @@
 
     <g transform="translate(0 226)">
       <text x="0" y="20" fill="#F2B84B" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">$ ship</text>
-      <text x="0" y="56" fill="#899590" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">infer names · stop on conflicts · never force</text>
+      <text x="0" y="56" fill="#899590" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">infer names · resolve failures · never force</text>
     </g>
   </g>
 

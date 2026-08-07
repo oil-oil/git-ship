@@ -12,7 +12,7 @@
 working tree → latest main → new branch → commit → local checks → PR → squash merge
 ```
 
-Invoking `ship` authorizes the full workflow. It automatically generates the branch name, Conventional Commit, and PR content, then runs without routine confirmation. It stops only on conflicts, failed validation, or another blocking command.
+Invoking `ship` authorizes the full workflow. It generates the branch name, Conventional Commit, and PR content, resolves conflicts, fixes validation or CI failures, and continues until the PR is merged.
 
 <p align="center">
   <img src="./assets/readme/workflow.svg" width="100%" alt="The seven guarded stages of the git-ship workflow">
@@ -23,9 +23,11 @@ Invoking `ship` authorizes the full workflow. It automatically generates the bra
 - Keeps local changes safe while synchronizing with the latest `main`.
 - Uses a fresh, descriptive branch for every shipment.
 - Creates a Conventional Commit and a readable pull request summary.
-- Runs the repository's existing checks before anything is pushed.
+- Runs the repository's existing checks and fixes failures before pushing.
+- Resolves conflicts while preserving both current production behavior and the new feature.
+- Reads CI logs, fixes failures, and retries until required checks pass.
 - Squash-merges the PR, deletes the remote branch, and returns to an up-to-date `main`.
-- Stops on conflicts, missing authentication, failed checks, or ambiguous destructive actions.
+- Pauses only for external blockers such as missing authentication, permissions, or required human approval.
 
 ## Install
 
@@ -66,13 +68,15 @@ It does not ask for confirmation of the branch name, commit message, PR title, o
 
 | Stage | Action | Guard |
 | --- | --- | --- |
-| Inspect | Read status and diff | Stops when there is nothing to ship |
-| Sync | Stash tracked and untracked changes, then pull `main` | Stops when pull fails |
-| Branch | Create a new branch | Stops when the name already exists |
-| Commit | Restore changes and commit all files | Stops on stash conflicts |
-| Verify | Run documented repository checks | Never pushes failed validation |
+| Inspect | Read working-tree changes and unpushed commits | Stops only when there is nothing to ship |
+| Sync | Stash changes and fetch the latest `origin/main` | Preserves local-only commits |
+| Branch | Create a unique branch or reuse the feature branch | Never duplicates the same change |
+| Commit | Restore changes and commit all files | Resolves stash conflicts |
+| Verify | Run documented repository checks | Fixes root causes and reruns checks |
 | Publish | Push and create a PR with `gh` | Requires GitHub authentication |
-| Merge | Squash, delete branch, return to `main` | Never force-pushes or hard-resets |
+| CI | Wait for checks and inspect failed logs | Fixes, pushes, and waits again |
+| Merge | Resync main, squash, and delete the branch | Resolves newly introduced conflicts |
+| Finish | Confirm the merge and return to `main` | Never force-pushes or hard-resets |
 
 ## Requirements
 
@@ -85,11 +89,11 @@ When no trustworthy validation command exists, the Skill reports that clearly in
 
 ## Safety model
 
-Invoking `ship` is the authorization gate for the complete publishing workflow. The Skill does not ask again for routine naming decisions. It keeps the current working tree in a temporary stash during synchronization and stops immediately on conflicts, failed validation, missing authentication, repository protection, or command failure. It does not use force push, `reset --hard`, or automatic conflict resolution.
+Invoking `ship` authorizes the complete publishing workflow, conflict resolution, and related validation fixes. The Skill preserves current production behavior and the new feature while repairing test, lint, type, build, and CI failures. It never force-pushes, hard-resets, skips checks, or weakens valid tests. It asks for help only when an external blocker such as authentication, permissions, or required human approval cannot be resolved locally.
 
 ## Customize
 
-Fork the repository and edit `SKILL.md` to match your team's branch naming, merge strategy, PR template, or required checks. Keep the conflict and failure gates intact when adding automation.
+Fork the repository and edit `SKILL.md` to match your team's branch naming, merge strategy, PR template, or required checks. Keep the non-destructive recovery rules and external permission boundaries intact.
 
 ## Contributing
 
