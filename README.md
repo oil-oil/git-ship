@@ -6,7 +6,7 @@
   <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
-`git-ship` is an Agent Skill for completing the repetitive Git handoff around a finished change:
+完成代码检查、分支整理、提交、推送、创建 PR 和合并，处理流程中的冲突与验证失败。
 
 ```text
 working tree → latest main → new branch → commit → local checks → PR → squash merge
