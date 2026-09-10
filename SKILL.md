@@ -100,11 +100,13 @@ gh auth status
 ```bash
 git stash push --include-untracked -m "git-ship: <timestamp>"
 git fetch --prune origin
-git checkout main
-git pull --ff-only origin main
 ```
 
-告知用户最新 `origin/main` 的 commit hash。
+fetch 后以第 0 步记录的原分支和原 HEAD 为基准检查待发布提交。原功能分支已有提交时保留该分支，直接合并 `origin/main`，随后恢复本次 stash；不能先切到 main 再决定原分支是否有提交。只有原分支没有待发布提交时才从 `origin/main` 新建发布分支。
+
+先从远端 HEAD 或仓库配置核对目标主分支；下文 `main` 是占位名称，仓库使用 `master` 等名称时全部替换为实际分支。
+
+告知用户最新主分支的 commit hash。
 
 如果本地 `main` 无法 fast-forward：
 
