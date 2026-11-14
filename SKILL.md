@@ -2,22 +2,26 @@
 name: git-ship
 description: |
   自动化 Git 工作流一键发布助手，执行完整的「ship」流程：
-  基于最新 main 切新分支 → commit → 推送 → 创建 PR → squash merge → 回 main。
+  基于最新 main 切新分支 → commit → 推送 → 创建 PR → 限时等待检查 → squash merge → 回 main。
   调用 ship 本身就是对完整流程的授权；自动推断分支名、commit message 和 PR 内容，
   并主动解决 Git 冲突、测试、lint、类型检查、构建和 CI 失败，持续修复和重试，
-  直到改动成功合并。不要因可自行修复的失败暂停，只在认证、权限、仓库保护等
+  直到 PR 实测状态为 MERGED。不要因可自行修复的失败暂停，只在认证、权限、仓库保护等
   无法由当前环境解决的外部阻塞出现时请求用户介入。
 
-  仅在用户明确表达「ship」意图时触发，例如：
+  仅在用户明确表达完整发布/合入意图时触发，例如：
   - 直接说「ship」「/ship」「git ship」
   - 明确要求完整走完 git 流程：「帮我走一遍 git 流程」「拉 main、切分支、提 PR、合并」
-  - 使用类似「发布这次改动」「把这些改动提成 PR 并合并」的表达
+  - 使用类似「发布这次改动」「把这些改动提成 PR 并合并」「修完之后合入上线」的表达
 
   不应触发的情况：
   - 只是想 commit
-  - 只是想创建 PR
+  - 只是想创建 PR（不合并）
   - 只是想 push 代码
   - 讨论 git 相关问题或解释 git 概念
+license: MIT
+compatibility: 需要 Git、已通过 gh auth login 认证的 GitHub CLI 与 Python 3.10+；可选读取本机已登录的 Vercel CLI 核验预览构建真实状态。
+metadata:
+  version: "1.1.0"
 ---
 
 # git-ship — 一键 Git 工作流
@@ -212,60 +216,59 @@ push 被拒绝时先分类处理：
 
 如果 PR 已存在则复用，不重复创建。创建成功后向用户展示 PR URL，然后继续，不等待回复。
 
-## 第 5 步：等待 CI 并修复
+## 第 5 步：同步最新 main、限时等待检查并合并
 
-使用 `gh pr checks <pr-number> --watch` 等仓库可用命令等待必需检查。
+严禁裸跑无超时的 `gh pr checks <pr-number> --watch`：第三方 Commit Status（如 Vercel Webhook）偶发丢包会让 `--watch` 无限挂起并堵死后续流程。统一使用随附脚本执行带硬超时、真实部署状态兜底、远端分支清理与 `MERGED` 强校验的闭环。
 
-检查失败时：
-
-1. 用 `gh pr checks`、`gh run view --log-failed` 等命令读取失败任务和日志。
-2. 能本地复现时先复现，按“验证失败修复循环”修复根因。
-3. 提交修复并正常 push，重新等待 CI。
-4. 重复直到必需检查全部通过。
-
-如果检查长期 pending，检查 workflow、并发队列和 GitHub 状态；能重新运行失败任务时自行处理。
-只有任务必须由有权限的人批准或外部服务持续不可用时才请求用户介入。
-
-## 第 6 步：同步最新 main 并 Squash 合并
-
-合并前再次同步主分支：
+合并前先同步主分支（有新提交时推送更新）：
 
 ```bash
 git fetch origin main
 git merge --no-edit origin/main
 ```
 
-有冲突时按“冲突处理流程”解决，重新跑本地验证、push 并等待 CI。然后直接合并：
+有冲突时按“冲突处理流程”解决、重跑本地验证并 `git push`。随后运行 `<skill-dir>/scripts/wait_and_merge.py`（用户指定 `--no-squash` 时把 `--strategy squash` 换为 `--strategy merge`）：
 
 ```bash
-gh pr merge <pr-number> --squash --delete-branch
+python3 <skill-dir>/scripts/wait_and_merge.py <pr-number> --strategy squash --timeout 240
 ```
 
-如果合并时提示 base 更新或冲突，重新执行同步、解决、验证、push、等待 CI 的闭环，再次合并。
-如果仓库支持合并队列，进入队列后持续等待，直到确认 PR 已实际合并。
+按脚本退出码和输出 JSON 的 `status` 分支处理：
 
-不得绕过分支保护。缺少必需审批、签名或权限时，这是外部阻塞：展示 GitHub 的准确返回信息，
-说明已经完成的步骤和用户只需完成的动作。
+- `0`（`MERGED`）：已确认 GitHub 远端 PR 状态为 `MERGED` 并清理同仓远端头分支，直接进入第 6 步。若 `bypassReason` 为 `vercel_ready_webhook_stale`，说明脚本已通过 Vercel CLI 核实预览部署实际为 `Ready` 并绕过了丢失的 GitHub 状态回调。
+- `4` 或 `5`（`CONFLICT` / `BEHIND`）：重新 `git fetch origin main && git merge --no-edit origin/main`，解决冲突、完成验证并 `git push` 后重跑脚本。
+- `6`（`CHECKS_FAILED`）：用 `gh run view --log-failed` 或部署日志读取失败根因，按“验证失败修复循环”修复并 `git push`，重跑脚本。
+- `7`（`CHECKS_TIMEOUT`）：检查 GitHub Actions 队列、并发阻塞或外部平台状态；可重跑卡死任务时自行重跑后再执行一次限时等待，外部平台持续故障时向用户说明情况。
+- `8`（`MERGE_NOT_COMPLETED`）：仓库启用了合并队列或异步合并，继续按短间隔核查 `gh pr view <pr-number> --json state` 直至变为 `MERGED`，严禁在 `OPEN` 状态下提前宣布完成。
+- `3`（`EXTERNAL_BLOCKER`）：缺少写权限、触发分支保护必需人工审批或签名，保留现场并展示 GitHub 返回的具体原因与用户唯一待办动作。
 
-## 第 7 步：回到 main 并确认结果
+同时发布多个仓库时，严禁用无超时命令串行阻塞后续仓库；有数据库迁移等先后依赖时，上游 PR 确认 `MERGED` 并验证迁移生效后，再执行下游仓库的合并与部署。
+
+## 第 6 步：回到 main 并确认结果
+
+兼容普通仓库克隆与独立 Git Worktree（次级 Worktree 中 `main` 已被主工作树检出时，不能强行 `git checkout main`）：
 
 ```bash
-git checkout main
-git pull --ff-only origin main
+git fetch --prune origin main
+if git checkout main 2>/dev/null; then
+  git pull --ff-only origin main
+  git branch -d <branch-name> 2>/dev/null || true
+else
+  git checkout --detach origin/main
+fi
 git status --short --branch
 gh pr view <pr-number> --json state,mergedAt,mergeCommit,url
 ```
 
-确认 PR 状态为 merged，并打印最终 `main` commit hash。如果本地 `main` 有预先存在的独有提交而
-无法 fast-forward，保留它们，不做破坏性处理；仍应确认远端 PR 已合并并把本地状态讲清楚。
+必须亲眼核对 `state` 为 `"MERGED"` 且 `mergeCommit.oid` 非空。如果本地 `main` 存在预先独有提交无法 fast-forward，保留它们不做破坏性处理，同时如实说明远端已合并与本地分支状态。
 
 打印最终状态：
 
 ```text
 🚀 Ship 完成！
-  ✓ 分支 <branch-name> 已合并到 main
-  ✓ 本地验证和必需 CI 已通过
-  ✓ 当前在 main，已同步最新代码（<commit-hash>）
+  ✓ 分支 <branch-name> 已合并到 main（远端分支已清理）
+  ✓ 本地验证和必需检查已通过
+  ✓ 当前已同步最新 origin/main（<commit-hash>）
   ✓ PR: <pr-url>
 ```
 
