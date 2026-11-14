@@ -31,15 +31,27 @@ Invoking `ship` authorizes the full workflow. It generates the branch name, Conv
 
 ## Install
 
-Clone the repository into a directory where your agent discovers skills:
+1. **Ask your Agent to install it** (recommended):
 
-```bash
-git clone https://github.com/oil-oil/git-ship.git ~/.agents/skills/git-ship
-```
+   ```text
+   Please install this Skill for me: https://github.com/oil-oil/git-ship
+   ```
 
-If your client uses another skills directory, clone it there instead. The important entry point is `SKILL.md`.
+2. **Install with the Skills CLI** (optional, requires `npx`):
 
-## Use
+   ```bash
+   npx skills add oil-oil/git-ship
+   ```
+
+3. **Manual Git clone**:
+
+   ```bash
+   git clone https://github.com/oil-oil/git-ship.git ~/.agents/skills/git-ship
+   ```
+
+If your host loads skills from another directory, clone or link it there and reload skills. The entry point is `SKILL.md`.
+
+## Usage
 
 Finish your change, leave it uncommitted in the working tree, then ask your agent:
 
@@ -74,22 +86,34 @@ It does not ask for confirmation of the branch name, commit message, PR title, o
 | Commit | Restore changes and commit all files | Resolves stash conflicts |
 | Verify | Run documented repository checks | Fixes root causes and reruns checks |
 | Publish | Push and create a PR with `gh` | Requires GitHub authentication |
-| CI | Wait for checks and inspect failed logs | Fixes, pushes, and waits again |
-| Merge | Resync main, squash, and delete the branch | Resolves newly introduced conflicts |
-| Finish | Confirm the merge and return to `main` | Never force-pushes or hard-resets |
+| CI & Merge | Poll checks with a hard timeout (`scripts/wait_and_merge.py`), verify stale Vercel status webhooks, resync `main`, squash-merge, and clean up the remote branch | Never hangs on `gh pr checks --watch` or fails in secondary Git worktrees |
+| Finish | Confirm `state == "MERGED"` and sync `main` | Never treats "PR created" or "auto-merge queued" as done |
 
-## Requirements
+## Requirements & Configuration
+
+No extra configuration file or custom API key setup is required:
 
 - Git
-- [GitHub CLI](https://cli.github.com/) authenticated with `gh auth login`
-- A repository whose primary branch is `main`
-- Repository validation commands documented in files such as `AGENTS.md`, `README.md`, `package.json`, `pyproject.toml`, or `Makefile`
+- [GitHub CLI](https://cli.github.com/) authenticated with `gh auth login` (reuses `gh`'s official keyring/OAuth session; never collects tokens in chat)
+- Python 3.10+ (stdlib only, powers `scripts/wait_and_merge.py`)
+- Optional: authenticated `vercel` CLI to verify real deployment status when GitHub Commit Status webhooks are dropped
+- Repository validation commands documented in `AGENTS.md`, `README.md`, `package.json`, `pyproject.toml`, or `Makefile`
 
-When no trustworthy validation command exists, the Skill reports that clearly instead of inventing one.
+When no trustworthy validation command exists, the Skill reports that clearly instead of inventing one. Primary branch names (`main`, `master`, etc.) are detected from the repository's actual default branch.
 
-## Safety model
+## Security & Boundaries
 
-Invoking `ship` authorizes the complete publishing workflow, conflict resolution, and related validation fixes. The Skill preserves current production behavior and the new feature while repairing test, lint, type, build, and CI failures. It never force-pushes, hard-resets, skips checks, or weakens valid tests. It asks for help only when an external blocker such as authentication, permissions, or required human approval cannot be resolved locally.
+Invoking `ship` authorizes the complete publishing workflow, conflict resolution, and related validation fixes. Only Git metadata, commits, and pull request calls are sent to the target GitHub remote via `git` and `gh` (and optional read-only deployment status checks via `vercel inspect` when a Vercel status context is present).
+
+The Skill preserves current production behavior and the new feature while repairing test, lint, type, build, and CI failures. It never force-pushes, hard-resets, skips checks, publishes secrets, or weakens valid tests. Do not use `git-ship` when you only want a local commit, push, or review-only PR without merging.
+
+## Testing
+
+Run the unit test suite for the check-and-merge runner:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
 
 ## Customize
 
@@ -102,25 +126,3 @@ Issues and pull requests are welcome. Please keep changes focused, explain any n
 ## License
 
 [MIT](./LICENSE)
-
-## 配置、依赖与使用边界
-
-需要 Git、GitHub CLI 与目标仓库写权限；复用 gh 的官方认证，不收集聊天中的密钥。命令中的主分支名以真实默认分支为准。
-
-调用 ship 即授权约定发布流程；先保留原分支与 HEAD，检查待提交内容。不把密钥、无关改动或失败检查一起发布。
-
-使用示例：
-
-```text
-ship 当前改动。
-```
-
-## GitHub 安装
-
-把 [仓库地址](https://github.com/oil-oil/git-ship) 交给 Agent，要求按 README 安装；也可运行：
-
-```bash
-npx skills add oil-oil/git-ship
-```
-
-安装后由宿主重新加载 Skill。

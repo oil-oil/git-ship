@@ -31,13 +31,25 @@
 
 ## 安装
 
-把仓库克隆到 Agent 能发现 Skill 的目录：
+1. **交给 Agent 安装**（推荐）：
 
-```bash
-git clone https://github.com/oil-oil/git-ship.git ~/.agents/skills/git-ship
-```
+   ```text
+   请帮我安装这个 Skill：https://github.com/oil-oil/git-ship
+   ```
 
-如果你的客户端使用其他 Skill 目录，请克隆到对应位置。真正的入口文件是 `SKILL.md`。
+2. **使用命令行安装**（可选，需 `npx`）：
+
+   ```bash
+   npx skills add oil-oil/git-ship
+   ```
+
+3. **手动克隆**：
+
+   ```bash
+   git clone https://github.com/oil-oil/git-ship.git ~/.agents/skills/git-ship
+   ```
+
+如果你的客户端使用其他 Skill 目录，克隆或软链到对应位置并重新加载即可。入口文件是 `SKILL.md`。
 
 ## 使用
 
@@ -74,18 +86,28 @@ ship
 | 提交 | 恢复改动并提交全部文件 | 自动解决 stash 冲突 |
 | 验证 | 运行仓库已有检查 | 修复根因并循环重跑 |
 | 发布 | push 并通过 `gh` 创建 PR | 需要完成 GitHub 登录 |
-| CI | 等待必需检查并读取失败日志 | 修复、提交、重新等待 |
-| 合并 | 再次同步 main、squash、删分支 | 自动解决新冲突 |
-| 完成 | 确认 PR 已合并并回到 `main` | 不使用强推或硬重置 |
+| CI 与合并 | 用 `scripts/wait_and_merge.py` 限时轮询检查、核验 Vercel 丢包状态、Squash 合并并清理远端分支 | 不裸跑无超时的 `gh pr checks --watch`，兼容次级 Git Worktree |
+| 完成 | 强校验 `state == "MERGED"` 并同步最新 `main` | 绝不把“PR 已创建”或“进入队列”当完成 |
 
-## 运行要求
+## 运行要求与配置
+
+无需额外配置文件，也不在对话中收集任何密钥：
 
 - Git
-- 已通过 `gh auth login` 登录的 [GitHub CLI](https://cli.github.com/)
-- 主分支为 `main` 的 Git 仓库
+- 已通过 `gh auth login` 登录的 [GitHub CLI](https://cli.github.com/)（直接复用 `gh` 官方认证）
+- Python 3.10+（仅使用标准库，运行 `scripts/wait_and_merge.py`）
+- 可选：已登录的 `vercel` CLI（当 GitHub 上的 Vercel 状态卡在 `PENDING` 时自动核验真实预览构建状态）
 - 在 `AGENTS.md`、`README.md`、`package.json`、`pyproject.toml` 或 `Makefile` 等文件中记录验证命令
 
 如果找不到可信的验证命令，Skill 会明确说明跳过，不会自行猜测。
+
+## 测试
+
+运行检查与合并脚本的单元测试：
+
+```bash
+python3 -m unittest discover -s tests -v
+```
 
 ## 安全边界
 
